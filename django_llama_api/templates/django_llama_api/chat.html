@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat with LLaMA</title>
+    <style>
+      body {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      #chat-container {
+        height: calc(100vh - 200px);
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+      }
+      .message {
+        margin-bottom: 15px;
+        padding: 10px;
+        border-radius: 5px;
+      }
+      .user-message {
+        background-color: #e3f2fd;
+        margin-left: 20%;
+      }
+      .assistant-message {
+        background-color: #f5f5f5;
+        margin-right: 20%;
+      }
+      #input-container {
+        display: flex;
+        gap: 10px;
+      }
+      #user-input {
+        flex-grow: 1;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 16px;
+      }
+      button {
+        padding: 10px 20px;
+        background-color: #2196f3;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      button:disabled {
+        background-color: #ccc;
+      }
+      .loader {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #fff;
+        border-bottom-color: transparent;
+        border-radius: 50%;
+        display: none;
+        animation: rotation 1s linear infinite;
+      }
+      @keyframes rotation {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-width: 100px;
+      }
+      #welcome-container {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #start-chat-btn {
+        padding: 15px 30px;
+        font-size: 18px;
+        background-color: #2196f3;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+      #start-chat-btn:hover {
+        transform: scale(1.05);
+      }
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="welcome-container">
+      <button id="start-chat-btn">Start Conversation</button>
+    </div>
+
+    <div id="chat-interface" class="hidden">
+      <div id="chat-container"></div>
+      <div id="input-container">
+        <input
+          type="text"
+          id="user-input"
+          placeholder="Type your message..."
+          autocomplete="off"
+        />
+        <button onclick="sendMessage()" id="send-button">
+          <span id="button-text">Send</span>
+          <div class="loader" id="button-loader"></div>
+        </button>
+      </div>
+    </div>
+
+    <script>
+      const chatContainer = document.getElementById("chat-container");
+      const userInput = document.getElementById("user-input");
+      const sendButton = document.getElementById("send-button");
+
+      const welcomeContainer = document.getElementById("welcome-container");
+      const chatInterface = document.getElementById("chat-interface");
+      const startChatBtn = document.getElementById("start-chat-btn");
+
+      startChatBtn.addEventListener("click", async () => {
+        welcomeContainer.classList.add("hidden");
+        chatInterface.classList.remove("hidden");
+
+        // Add initial greeting message
+        addMessage(
+          "assistant",
+          "Hello! 👋 I'm your AI assistant. How can I help you today?"
+        );
+      });
+
+      userInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          sendMessage();
+        }
+      });
+
+      async function sendMessage() {
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        // Get loader elements
+        const buttonText = document.getElementById("button-text");
+        const buttonLoader = document.getElementById("button-loader");
+
+        // Show loading state
+        userInput.disabled = true;
+        sendButton.disabled = true;
+        buttonText.style.display = "none";
+        buttonLoader.style.display = "block";
+
+        // Add user message to chat
+        addMessage("user", message);
+        userInput.value = "";
+
+        try {
+          const response = await fetch(
+            `/chat/completions/?prompt=${encodeURIComponent(message)}`
+          );
+          const data = await response.json();
+
+          if (data.error) {
+            throw new Error(data.error);
+          }
+
+          addMessage("assistant", data.response);
+        } catch (error) {
+          addMessage("assistant", `Error: ${error.message}`);
+        } finally {
+          // Reset loading state
+          userInput.disabled = false;
+          sendButton.disabled = false;
+          buttonText.style.display = "block";
+          buttonLoader.style.display = "none";
+          userInput.focus();
+
+          // Scroll to bottom
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+      }
+
+      function addMessage(role, content) {
+        const messageDiv = document.createElement("div");
+        messageDiv.classList.add("message", `${role}-message`);
+        messageDiv.textContent = content;
+        chatContainer.appendChild(messageDiv);
+      }
+    </script>
+  </body>
+</html>
